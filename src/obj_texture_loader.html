@@ -1,0 +1,132 @@
+<html>
+	<head>
+		<title>Shadow Test</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+		</style>
+	</head>
+	<body>
+		<script src="./three.js"></script>
+		<script src="./TrackballControls.js"></script>
+    <script src="./MTLLoader.js"></script>
+		<script src="./LoaderSupport.js"></script>
+    <script src="./OBJLoader2.js"></script>
+		<script>
+
+			var renderer = new THREE.WebGLRenderer({antialias: true});
+      renderer.setPixelRatio(window.devicePixelRatio)
+			renderer.setSize( window.innerWidth, window.innerHeight );
+//      renderer.shadowMap.enabled = true;
+//      renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+      //var setRenderer = function(){
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+        //console.log('renderer reseted')
+      //}
+      //setTimeout(setRenderer, 1000)
+
+			document.body.appendChild( renderer.domElement );
+			var scene = new THREE.Scene();
+			var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+			controls = new THREE.TrackballControls( camera, renderer.domElement );
+
+
+      var light = new THREE.DirectionalLight(0xffffff, 1)
+      light.position.set(20,0,20)
+      light.lookAt(new THREE.Vector3(400,400,400))
+      //light.castShadow = true
+
+
+      //Create a helper for the shadow camera (optional)
+      var helper = new THREE.CameraHelper( light.shadow.camera );
+      scene.add( helper );
+
+
+      scene.add(new THREE.AmbientLight(0x333333))
+
+			camera.position.set(10,10,10);
+      camera.lookAt(new THREE.Vector3(0,0,0))
+
+      var myGroup = new THREE.Group()
+      function setCastShadow(group){
+        if(group.type === 'Mesh')
+          group.castShadow = true
+        group.children.forEach(child => {
+          setCastShadow(child)
+        })
+      }
+
+      //setTimeout(castShadow, 3000)
+
+
+      var planeGeo = new THREE.PlaneGeometry(20,20)
+			var material = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x303030, emissive: 0x202020} );
+      var plane = new THREE.Mesh(planeGeo, material)
+      plane.receiveShadow = true
+      /*
+
+      var objLoader = new THREE.OBJLoader2()
+      var objCallback = function(event){
+        myGroup.add(event.detail.loaderRootNode)
+        setCastShadow(myGroup)
+      }
+
+      onLoadMtl = function(materials){
+        console.log('materials:',materials)
+        objLoader.setMaterials(materials)
+        objLoader.load('./mushroom.obj', objCallback, null, null, null, false)
+        
+      }
+      objLoader.loadMtl('./mushroom.mtl',null, onLoadMtl)
+      */
+      light.castShadow = true
+
+
+      //this function return a promise
+      function getMeshFromObjAndMtl(objurl, mtlurl){
+          if(arguments.length === 1){
+            if(objurl.slice(-4) === '.obj')
+              mtlurl = objurl.slice(0,-4) + '.mtl'
+            else{
+              mtlurl = objurl + '.mtl'
+              objurl += '.obj'
+            }
+          }
+
+          var objLoader = new THREE.OBJLoader2()
+
+        return new Promise((resolve, reject) => {
+          var onObjLoad = function(event){
+            resolve(event.detail.loaderRootNode)
+          }
+
+          var onLoadMtl = function(mats){
+            objLoader.setMaterials(mats)
+            objLoader.load(objurl, onObjLoad, null, null, null, false)
+          }
+          objLoader.loadMtl(mtlurl, null, onLoadMtl)
+        })
+      }
+
+      getMeshFromObjAndMtl('./mushroom').then(node => {
+        myGroup.add(node)
+        setCastShadow(myGroup)
+      })
+
+
+      //scene.add(camera)
+      scene.add(myGroup)
+      scene.add(plane)
+      scene.add(light)
+
+			var animate = function () {
+				requestAnimationFrame( animate );
+				controls.update();
+				renderer.render(scene, camera);
+			};
+
+			animate();
+		</script>
+	</body>
+</html>

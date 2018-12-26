@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - geometry - extrude shapes</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #222;
+				margin: 0px;
+				overflow: hidden;
+			}
+			a {
+				color: #f80;
+			}
+		</style>
+	</head>
+
+	<body>
+
+		<script src="./three.js"></script>
+		<script src="./TrackballControls.js"></script>
+
+		<script>
+
+			var container;
+
+			var camera, scene, renderer, controls;
+
+
+			init();
+			animate();
+
+			function init() {
+
+
+				renderer = new THREE.WebGLRenderer();
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				document.body.appendChild( renderer.domElement );
+
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0x222222 );
+
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );
+				camera.position.set( 0, 0, 500 );
+
+				controls = new THREE.TrackballControls( camera, renderer.domElement );
+				controls.minDistance = 200;
+				controls.maxDistance = 500;
+
+				//scene.add( new THREE.AmbientLight( 0x222222 ) );
+
+				var light = new THREE.PointLight( 0xffffff );
+				//light.position.copy( camera.position );
+        //light.lookAt(new THREE.Vector3(0,0,0))
+				//scene.add( light );
+        camera.add(light)
+        scene.add(camera)
+			  var geometry = new THREE.BoxBufferGeometry( 100, 100, 100 );
+			  var material = new THREE.MeshPhongMaterial( { color: 0x00ff00, specular: 0x303030, emissive: 0x202020 } );
+			  var cube = new THREE.Mesh( geometry, material );
+
+        var cube1 = new THREE.Mesh( geometry, material);
+        cube1.position.set(110, 0, 0)
+        
+        scene.add(cube)
+        scene.add(cube1)
+
+			}
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				controls.update();
+				renderer.render( scene, camera );
+
+			}
+
+      class TestClass{
+        constructor(prop1, prop2){
+          Object.defineProperty(this, 'prop1', 
+            { set: function(x) { this.__prop1 = x; console.log('prop1 setted')} });
+          this.__prop1 = prop1
+          this.__prop2 = prop2
+        }
+      }
+
+		</script>
+
+	</body>
+
+</html>

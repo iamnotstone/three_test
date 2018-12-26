@@ -1,0 +1,104 @@
+<html>
+	<head>
+		<title>Shadow Test</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+		</style>
+	</head>
+	<body>
+		<script src="./three.js"></script>
+		<script src="./TrackballControls.js"></script>
+		<script>
+
+			var renderer = new THREE.WebGLRenderer({antialias: true});
+      renderer.setPixelRatio(window.devicePixelRatio)
+			renderer.setSize( window.innerWidth, window.innerHeight );
+//      renderer.shadowMap.enabled = true;
+//      renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+      //var setRenderer = function(){
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+        //console.log('renderer reseted')
+      //}
+      //setTimeout(setRenderer, 1000)
+
+			document.body.appendChild( renderer.domElement );
+			var scene = new THREE.Scene();
+			var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+			controls = new THREE.TrackballControls( camera, renderer.domElement );
+
+
+      var light = new THREE.DirectionalLight(0xffffff, 1)
+      light.position.set(20,0,20)
+      light.lookAt(new THREE.Vector3(400,400,400))
+      //light.castShadow = true
+
+
+      //Create a helper for the shadow camera (optional)
+      var helper = new THREE.CameraHelper( light.shadow.camera );
+      scene.add( helper );
+
+
+      scene.add(new THREE.AmbientLight(0x333333))
+
+			camera.position.set(10,10,10);
+      camera.lookAt(new THREE.Vector3(0,0,0))
+
+
+
+			var geometry = new THREE.BoxBufferGeometry( 5, 5, 5 );
+			var material = new THREE.MeshPhongMaterial( { color: 0x00ff00, specular: 0x303030, emissive: 0x202020 } );
+			var cube = new THREE.Mesh( geometry, material );
+      cube.translateZ(2.5)
+      var myGroup = new THREE.Group()
+      myGroup.add(cube)
+      //myGroup.castShadow = true
+      function setCastShadow(group){
+        if(group.type === 'Mesh')
+          group.castShadow = true
+        group.children.forEach(child => {
+          setCastShadow(child)
+        })
+      }
+      //var castShadow = function(){
+        setCastShadow(myGroup)
+        light.castShadow = true
+      //}
+
+      //setTimeout(castShadow, 3000)
+
+
+      var textureLoader = new THREE.TextureLoader()
+      //var texture = textureLoader.load('./wukong.png')
+      var texture = textureLoader.load('http://pbp1vd6jx.bkt.clouddn.com/image/7')
+      
+      //texture = new THREE.Texture()
+
+      texture.wrapS = THREE.repeatWrapping
+      texture.wrapT = THREE.repeatWrapping
+      texture.repeat.set(1,1)
+      var planeGeo = new THREE.PlaneGeometry(20,20)
+			var material1 = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x303030, emissive: 0x202020, map: texture } );
+      var plane = new THREE.Mesh(planeGeo, material1)
+      plane.receiveShadow = true
+
+
+
+      scene.add(camera)
+      scene.add(myGroup)
+      scene.add(plane)
+      scene.add(light)
+
+
+			var animate = function () {
+				requestAnimationFrame( animate );
+				controls.update();
+
+				renderer.render(scene, camera);
+			};
+
+			animate();
+		</script>
+	</body>
+</html>
