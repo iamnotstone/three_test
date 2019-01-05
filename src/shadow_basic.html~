@@ -70,8 +70,8 @@
 
 
       var textureLoader = new THREE.TextureLoader()
-      var texture = textureLoader.load('./wukong.png')
-      //var texture = textureLoader.load('http://pbp1vd6jx.bkt.clouddn.com/image/7')
+      //var texture = textureLoader.load('./wukong.png')
+      var texture = textureLoader.load('http://pbp1vd6jx.bkt.clouddn.com/image/7')
       
       //texture = new THREE.Texture()
 
