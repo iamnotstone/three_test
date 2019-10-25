@@ -1,0 +1,90 @@
+<html>
+	<head>
+		<title>Shadow Test</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+		</style>
+	</head>
+	<body>
+		<script src="./three.js"></script>
+		<script src="./TrackballControls.js"></script>
+		<script>
+
+			var renderer = new THREE.WebGLRenderer({antialias: true});
+      renderer.setPixelRatio(window.devicePixelRatio)
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );
+			var scene = new THREE.Scene();
+			var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+			controls = new THREE.TrackballControls( camera, renderer.domElement );
+
+
+      var light = new THREE.DirectionalLight(0xffffff, 1)
+      light.position.set(0,0,120)
+      light.lookAt(new THREE.Vector3(400,400,400))
+      //light.castShadow = true
+
+
+      scene.add(new THREE.AmbientLight(0x333333))
+
+			camera.position.set(0,50,40);
+      camera.up.set(0,0,1)
+      camera.lookAt(new THREE.Vector3(50,0,0))
+
+
+
+      var textureLoader = new THREE.TextureLoader()
+      var texture = textureLoader.load('./wukong.jpg')
+      texture.wrapS = THREE.repeatWrapping
+      texture.wrapT = THREE.repeatWrapping
+      texture.repeat.set(1,1)
+
+      var bumpmap = textureLoader.load('./bumpmaptest1.png')
+      var bumpmap2 = textureLoader.load('./bumpmaptest2.png')
+      bumpmap.wrapS = THREE.RepeatWrapping
+      bumpmap.wrapT = THREE.RepeatWrapping
+      //bumpmap.repeat.set(1,1)
+
+      var planeGeo = new THREE.PlaneGeometry(20,20)
+			var material1 = new THREE.MeshPhongMaterial( 
+        { 
+          color: 0xffffff, 
+          specular: 0x303030, 
+          emissive: 0x202020,
+          transparent: false,
+          //map: texture,
+          bumpMap: bumpmap
+       } );
+      var plane = new THREE.Mesh(planeGeo, material1)
+
+
+      var planeGeo2 = planeGeo.clone()
+			var material2 = new THREE.MeshPhongMaterial( 
+        { 
+          color: 0xff0000, 
+          specular: 0x303030, 
+          emissive: 0x202020,
+          transparent: false,
+          //map: texture,
+          bumpMap: bumpmap2
+       } );
+      var plane2 = new THREE.Mesh(planeGeo2, material2)
+      plane2.position.set(30,0,0)
+    
+      scene.add(plane2)
+      scene.add(camera)
+      scene.add(plane)
+      scene.add(light)
+			
+			var animate = function () {
+				requestAnimationFrame( animate );
+				controls.update();
+
+				renderer.render(scene, camera);
+			};
+
+			animate();
+		</script>
+	</body>
+</html>

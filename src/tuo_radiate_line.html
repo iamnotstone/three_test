@@ -1,0 +1,328 @@
+<html>
+	<head>
+		<title>Tuo Radiate Line</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+
+      #root {
+        position: absolute;
+        left: 0px;
+        top: 0px;
+        width: 256px;
+        height: 256px;
+        background-color: white
+      }
+		</style>
+	</head>
+	<body>
+		<script src="./three.js"></script>
+		<script src="./TrackballControls.js"></script>
+		<script type="x-shader/x-vertex" id="vertexshader">
+
+      uniform float percent;
+      //attribute vec3 originPosition;
+      attribute float order;
+      uniform float uType;
+      uniform float index1;
+      uniform float index2;
+      uniform vec3 curPoint2;
+      uniform vec3 curPoint1;
+      //uniform vec3 curPoint2;
+      void main() {
+        
+        if(percent < 1.0){
+          vec3 transformed;
+          if(uType == 0.0){
+            if(order <= index1)
+              transformed = position;
+            else
+              transformed = curPoint1;
+          }
+          else if(uType == 1.0){
+            if(order >= index1)
+              transformed = position;
+            else
+              transformed = curPoint1;
+          }
+          else{
+            if(midVirtual == 1){
+              if(order < index2 && order > index1)
+                transformed = position;
+              else if(order >= index2){
+                transformed = curPoint2;
+              }
+              else
+                transformed = curPoint1;
+            }
+            else{
+              if(order <= index2 && order >= index1)
+                transformed = position;
+              else if(order > index2){
+                transformed = curPoint2;
+              }
+              else
+                transformed = curPoint1;
+
+            }
+          }
+				  gl_Position = projectionMatrix * modelViewMatrix * vec4( transformed, 1.0 );
+        }
+        else
+				  gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+      }
+
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragmentshader">
+
+      uniform vec3 color;
+			void main() {
+        gl_FragColor = vec4(color, 1.0);
+			}
+
+		</script>
+		<script>
+
+			var renderer = new THREE.WebGLRenderer({antialias: true});
+      renderer.setPixelRatio(window.devicePixelRatio)
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );
+			var scene = new THREE.Scene();
+			var camera = new THREE.PerspectiveCamera( 75, 
+        window.innerWidth/window.innerHeight, 0.1, 1000 );
+
+
+      var light = new THREE.PointLight(0xffffff, 1)
+      light.position.set(0,10,20)
+      light.lookAt(new THREE.Vector3(0,0,0))
+
+      scene.add(light)
+
+      let canvas = document.createElement('canvas')
+      canvas.style.width = 512
+      canvas.style.height = 256
+      let lineGeo = new THREE.BufferGeometry()
+      let position = new Float32Array(3 * 3)
+      position[0] = 0
+      position[1] = 0
+      position[2] = 0
+      position[3] = 10
+      position[4] = 0
+      position[5] = 0
+      position[6] = 15
+      position[7] = 10
+      position[8] = 5
+      /*position[9] = 10
+      position[10] = -1
+      position[11] = 10
+      position[12] = -10
+      position[13] = 5
+      position[14] = 10*/
+      lineGeo.addAttribute('position', new THREE.BufferAttribute(position, 3))
+
+//geometry: THREE.Geometry || THREE.BufferGeometry
+//parameters: {
+//  type: 'start' || 'end' || 'mid'
+//}
+
+      let obj = getRadiateLine(lineGeo, {type: 'end', speed: 0.5})
+      scene.add(obj)
+function getRadiateLine(geometry, parameters = {}){
+  let origin = new THREE.Vector3()
+  let type = parameters.type || 'mid'
+  let speed = parameters.speed || speed
+  let newGeometry
+  if(/BufferGeometry$/.test(geometry.type)){
+    if(geometry.index)
+      newGeometry = geometry.toNonIndexed()
+    else
+      newGeometry = geometry
+  }
+  else{
+    newGeometry = new BufferGeometry()
+    newGeometry.fromGeometry(geometry)
+  }
+
+  let position = newGeometry.getAttribute('position')
+  if(position.array.length < 6)
+    return
+  let order = new Float32Array(position.array.length / 3)
+  let originPosition = new Float32Array(position.array.length)
+  let segment = new Float32Array(position.array.length / 3)
+  let deta, midPoint, uType, index1, index2, midIndex1, midIndex2, midVirtual = false
+  switch(type){
+    case 'start':
+      uType = 0
+      index1 = 0
+      deta = 1.0 / (position.array.length / 3.0 - 1)
+      break
+    case 'end':
+      uType = 1
+      index1 = position.array.length / 3
+      deta = 1.0 / (position.array.length / 3.0 - 1)
+      break
+    default:
+      uType = 2
+      deta = 1.0 / Math.floor(position.array.length / 6.0)
+      if(position.array.length % 6){
+        midIndex1 = Math.floor(position.array.length / 6)
+        midIndex2 = midIndex1
+        midPoint = [
+          position.array[3*midIndex1], 
+          position.array[3*midIndex1 + 1],
+          position.array[3*midIndex1 + 2]
+        ]
+        index1 = midIndex1
+        index2 = midIndex1
+      }
+      else{
+        midVirtual = true
+        midIndex1 = position.array.length / 6 - 1
+        midIndex2 = position.array.length / 6
+        midPoint = [
+          (position.array[3*midIndex1] + position.array[3*midIndex2]) / 2, 
+          (position.array[3*midIndex1 + 1] + position.array[3*midIndex2 + 1]) / 2,
+          (position.array[3*midIndex1 + 2] + position.array[3*midIndex2 + 2]) / 2
+        ]
+        index1 = midIndex1
+        index2 = midIndex2
+      }
+      break
+  }
+
+  for(let j = 0; j < order.length; j ++)
+      order[j] = j
+
+
+  newGeometry.addAttribute('order', new THREE.BufferAttribute(order, 1))
+
+  let uniforms = {
+    percent: {value: 0.0},
+    color: {value: parameters.color ? new THREE.Color(parameters.color) 
+      : new THREE.Color(0xffffff)},
+    uType: {value: uType},
+    index1: {value: index1},
+    index2: {value: index2},
+    curPoint1: {value: new THREE.Vector3()},
+    curPoint2: {value: new THREE.Vector3()}
+  }
+
+  let mat = new THREE.ShaderMaterial({
+    uniforms: uniforms,
+		vertexShader:document.getElementById( 'vertexshader' ).textContent,
+		fragmentShader: document.getElementById('fragmentshader').textContent,
+    defines: {
+      midVirtual: midVirtual ? 1 : 0
+    }
+  })
+
+  let line = new THREE.Line(newGeometry, mat)
+  let p0 = new THREE.Vector3() ,p1 = new THREE.Vector3(),
+      p2 = new THREE.Vector3(), p3 = new THREE.Vector3()
+  line.userData.animator = (time, stopFunction = new Function()) => {
+    if(uniforms.percent.value < 1.0){
+      if(type == 'start'){
+        let index1 = Math.floor(uniforms.percent.value / deta)
+        uniforms.index1.value = index1
+        if(index1 < position.array.length / 3 - 1){
+          p0.set(position.array[3 * index1], position.array[3 * index1 + 1], 
+            position.array[3 * index1 + 2])
+          p1.set(position.array[3 * index1 + 3], position.array[3 * index1 + 4], 
+            position.array[3 * index1 + 5])
+          let a = (uniforms.percent.value - index1 * deta) / deta
+          uniforms.curPoint1.value.copy(p0.multiplyScalar(1 - a).add(p1.multiplyScalar(a)))
+        }
+      }
+      else if(type == 'end'){
+        let index1 = position.array.length / 3 
+          - Math.floor(uniforms.percent.value / deta) - 1
+        uniforms.index1.value = index1
+        if(index1 > 0){
+          p0.set(position.array[3 * index1], position.array[3 * index1 + 1], 
+            position.array[3 * index1 + 2])
+          p1.set(position.array[3 * index1 - 3], position.array[3 * index1 -2 ], 
+            position.array[3 * index1 - 1])
+          let a = (uniforms.percent.value - 
+            (position.array.length / 3  - 1 - index1) * deta) / deta
+          uniforms.curPoint1.value.copy(p0.multiplyScalar(1-a)
+            .add(p1.multiplyScalar(a)))
+        }
+
+      }
+      else{
+        let d = Math.floor(uniforms.percent.value / deta)
+        uniforms.index1.value = midIndex1 - d
+        uniforms.index2.value = midIndex2 + d
+        let i1 = uniforms.index1.value
+        let i2 = uniforms.index2.value
+        let a
+        if(midVirtual){
+          if(i1 == midIndex1){
+            p0.set(midPoint[0], midPoint[1], midPoint[2])
+            p1.set(position.array[3 * i1], position.array[3 * i1 + 1 ], 
+              position.array[3 * i1 + 2])
+            p2.set(midPoint[0], midPoint[1], midPoint[2])
+            p3.set(position.array[3 * i2], position.array[3 * i2 + 1 ],
+              position.array[3 * i2 + 2])
+            a = (uniforms.percent.value - (midIndex1 - i1) * deta) / deta
+          }
+          else{
+            p0.set(position.array[3 * i1 + 3], position.array[3 * i1 + 4], 
+              position.array[3 * i1 + 5])
+            p1.set(position.array[3 * i1], position.array[3 * i1 + 1], 
+              position.array[3 * i1 + 2])
+            p2.set(position.array[3 * i2 - 3], position.array[3 * i2 - 2], 
+              position.array[3 * i2 - 1])
+            p3.set(position.array[3 * i2], position.array[3 * i2 + 1 ],
+              position.array[3 * i2 + 2])
+            a = (uniforms.percent.value - (midIndex1 - i1) * deta) / deta
+          }
+        }else{
+          p0.set(position.array[3 * i1], position.array[3 * i1 + 1], 
+            position.array[3 * i1 + 2])
+          p1.set(position.array[3 * i1 - 3], position.array[3 * i1 - 2], 
+            position.array[3 * i1 - 1])
+          p2.set(position.array[3 * i2], position.array[3 * i2 + 1], 
+            position.array[3 * i2 + 2])
+          p3.set(position.array[3 * i2 + 3], position.array[3 * i2 + 4],
+            position.array[3 * i2 + 5])
+          a = (uniforms.percent.value - (midIndex1 - i1) * deta) / deta
+
+        }
+
+        uniforms.curPoint1.value.copy(p0.multiplyScalar(1-a)
+          .add(p1.multiplyScalar(a)))
+        uniforms.curPoint2.value.copy(p2.multiplyScalar(1-a)
+          .add(p3.multiplyScalar(a)))
+      }
+
+      uniforms.percent.value += 0.04 * speed
+    }
+    else{
+      stopFunction()
+    }
+  }
+  return line
+}
+
+
+
+
+			camera.position.set(20,20,20);
+      camera.up.set(0,0,1)
+      camera.lookAt(new THREE.Vector3(0,0,0))
+			controls = new THREE.TrackballControls( camera, renderer.domElement );
+		  controls.target.set(5,5,5)	
+			var animate = function () {
+				requestAnimationFrame( animate );
+				controls.update();
+				renderer.render(scene, camera);
+        if(obj.userData.animator)
+          obj.userData.animator()
+			};
+
+			animate();
+		</script>
+	</body>
+</html>

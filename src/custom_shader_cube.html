@@ -1,0 +1,430 @@
+<html>
+	<head>
+		<title>Custom Shader 1</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+		</style>
+	</head>
+	<body>
+		<script src="./three.js"></script>
+		<script src="./TrackballControls.js"></script>
+		<script type="x-shader/x-vertex" id="vertexshader">
+
+
+      attribute vec3 color;
+      varying vec3 vColor; 
+      void main() {
+        vColor = color;
+				gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+      }
+
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragmentshader">
+
+
+      varying vec3 vColor;
+			void main() {
+
+        gl_FragColor = vec4(vColor, 0.6);
+
+			}
+
+		</script>
+
+		<script>
+
+			var renderer = new THREE.WebGLRenderer({antialias: true});
+      renderer.setPixelRatio(window.devicePixelRatio)
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );
+			var scene = new THREE.Scene();
+			var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+
+
+      var light = new THREE.PointLight(0xffffff, 1)
+      light.position.set(0,10,20)
+      light.lookAt(new THREE.Vector3(0,0,0))
+      //scene.add(new THREE.AmbientLight(0x333333))
+
+
+
+
+			//var geometry = new THREE.BoxBufferGeometry( 5, 5, 5 );
+
+
+      let cubeColors = []
+      for(let i = 0; i < 8; i ++){
+        cubeColors.push(new THREE.Color(0x00ff00))
+      }
+
+      cubeColors[4].set(0xff0000)
+      cubeColors[1].set(0x0000ff)
+      //position: THREE.Vector3(),
+      //colors: [THREE.Color, THREE.Color, THREE.Color, ...] //length = 8
+      //function createColorCube(loc, length, width, height, colors){
+      //[{
+      //  point: THREE.Vector3,
+      //  color: THREE.Color,
+      //  label: String
+      //},...] // length = 8
+      function createColorCube(testPoints){
+        /*let vectors = []
+        
+        v1 = loc.clone()
+        v2 = v1.clone().add(new THREE.Vector3(length, 0, 0))
+        v3 = v2.clone().add(new THREE.Vector3(0, width, 0))
+        v4 = v3.clone().add(new THREE.Vector3(-length, 0, 0))
+        v5 = v1.clone().add(new THREE.Vector3(0,0,height))
+        v6 = v2.clone().add(new THREE.Vector3(0,0,height))
+        v7 = v3.clone().add(new THREE.Vector3(0,0,height))
+        v8 = v4.clone().add(new THREE.Vector3(0,0,height))
+        vectors.push(v1)
+        vectors.push(v2)
+        vectors.push(v3)
+        vectors.push(v4)
+        vectors.push(v5)
+        vectors.push(v6)
+        vectors.push(v7)
+        vectors.push(v8)*/
+        let vectors = testPoints.map(obj => obj.point)
+        let colors = testPoints.map(obj => obj.color)
+
+
+        let geometry = new THREE.BufferGeometry()
+        let position = new Float32Array(6 * 2 * 3 * 3)
+        let color = new Float32Array(6 * 2 * 3 * 3)
+        let index = 0
+        function addTrig(p0, p1, p2, c0, c1, c2){
+          position[index] = p0.x
+          position[index + 1] = p0.y
+          position[index + 2] = p0.z
+          position[index + 3] = p1.x
+          position[index + 4] = p1.y
+          position[index + 5] = p1.z
+          position[index + 6] = p2.x
+          position[index + 7] = p2.y
+          position[index + 8] = p2.z
+
+          color[index] = c0.r
+          color[index + 1] = c0.g
+          color[index + 2] = c0.b
+          color[index + 3] = c1.r
+          color[index + 4] = c1.g
+          color[index + 5] = c1.b
+          color[index + 6] = c2.r
+          color[index + 7] = c2.g
+          color[index + 8] = c2.b
+
+          index += 9
+        }
+
+        function addTrigByIndex(i1,i2,i3){
+          addTrig(vectors[i1], vectors[i2], vectors[i3], colors[i1], colors[i2], colors[i3])
+        }
+
+        addTrigByIndex(0,2,1)
+        addTrigByIndex(0,3,2)
+        addTrigByIndex(1,6,5)
+        addTrigByIndex(1,2,6)
+        addTrigByIndex(0,1,5)
+        addTrigByIndex(0,5,4)
+        addTrigByIndex(0,4,3)
+        addTrigByIndex(4,7,3)
+        addTrigByIndex(7,6,3)
+        addTrigByIndex(6,2,3)
+        addTrigByIndex(4,5,6)
+        addTrigByIndex(4,6,7)
+    
+        geometry.addAttribute('position', new THREE.BufferAttribute(position, 3))
+        geometry.addAttribute('color', new THREE.BufferAttribute(color, 3))
+        return geometry
+      }
+
+
+
+			uniforms = {
+			};
+
+			var shaderMaterial = new THREE.ShaderMaterial( {
+
+				uniforms: uniforms,
+				vertexShader:document.getElementById( 'vertexshader' ).textContent,
+				fragmentShader: document.getElementById('fragmentshader').textContent,
+        transparent: true, 
+				blending: THREE.AdditiveBlending,
+				depthTest:  false,
+        side: THREE.DoubleSide
+			});
+      var testPoints = [
+        //first layer
+        [
+          [
+            {
+              point: new THREE.Vector3(0,0,0),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+            {
+              point: new THREE.Vector3(5,0,0),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+            {
+              point: new THREE.Vector3(10,0,0),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+          ],
+          [
+            {
+              point: new THREE.Vector3(0,5,0),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+            {
+              point: new THREE.Vector3(5,5,0),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+            {
+              point: new THREE.Vector3(10,5,0),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+          ],
+          [
+            {
+              point: new THREE.Vector3(0,10,0),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+            {
+              point: new THREE.Vector3(5,10,0),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+            {
+              point: new THREE.Vector3(10,10,0),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+          ],
+        ],
+ 
+        //second layer
+        [
+          [
+            {
+              point: new THREE.Vector3(0,0,5),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+            {
+              point: new THREE.Vector3(5,0,5),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+            {
+              point: new THREE.Vector3(10,0,5),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+          ],
+          [
+            {
+              point: new THREE.Vector3(0,5,5),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+            {
+              point: new THREE.Vector3(5,5,5),
+              color: new THREE.Color(0x0000ff),
+              label: '15C' 
+            },
+            {
+              point: new THREE.Vector3(10,5,5),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+          ],
+          [
+            {
+              point: new THREE.Vector3(0,10,5),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+            {
+              point: new THREE.Vector3(5,10,5),
+              color: new THREE.Color(0xff0000),
+              label: '30C' 
+            },
+            {
+              point: new THREE.Vector3(10,10,5),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+          ],
+        ],
+
+        //third layer
+        [
+          [
+            {
+              point: new THREE.Vector3(0,0,10),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+            {
+              point: new THREE.Vector3(5,0,10),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+            {
+              point: new THREE.Vector3(10,0,10),
+              color: new THREE.Color(0xff0000),
+              label: '30C' 
+            },
+          ],
+          [
+            {
+              point: new THREE.Vector3(0,5,10),
+              color: new THREE.Color(0x0000ff),
+              label: '15C' 
+            },
+            {
+              point: new THREE.Vector3(5,5,10),
+              color: new THREE.Color(0x0000ff),
+              label: '15C' 
+            },
+            {
+              point: new THREE.Vector3(10,5,10),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+          ],
+          [
+            {
+              point: new THREE.Vector3(0,10,10),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+            {
+              point: new THREE.Vector3(5,10,10),
+              color: new THREE.Color(0xff0000),
+              label: '30C' 
+            },
+            {
+              point: new THREE.Vector3(10,10,10),
+              color: new THREE.Color(0x00ff00),
+              label: '25C' 
+            },
+          ],
+        ],
+      ]
+
+      function getCubesFromTestPoints(testPoints){
+        let geometries = []
+        //get 8 point
+        let xSegment = testPoints[0][0].length
+        let ySegment = testPoints[0].length
+        let zSegment = testPoints.length
+        for(let zi = 0; zi < zSegment - 1; zi ++){
+          for(let yi = 0; yi < ySegment - 1; yi ++){
+            for(let xi = 0; xi < xSegment - 1; xi ++){
+              let unitPoints = []
+              unitPoints.push(testPoints[zi][yi][xi])
+              unitPoints.push(testPoints[zi][yi][xi + 1])
+              unitPoints.push(testPoints[zi][yi + 1][xi + 1])
+              unitPoints.push(testPoints[zi][yi + 1][xi])
+              unitPoints.push(testPoints[zi + 1][yi][xi])
+              unitPoints.push(testPoints[zi + 1][yi][xi + 1])
+              unitPoints.push(testPoints[zi + 1][yi + 1][xi + 1])
+              unitPoints.push(testPoints[zi + 1][yi + 1][xi])
+              let geoCube = createColorCube(unitPoints)
+              geometries.push(geoCube)
+            }
+          }
+        }
+        return geometries
+      }
+
+      let geometries = getCubesFromTestPoints(testPoints)
+      geometries.forEach(geo => {
+			  var cube = new THREE.Mesh(geo, shaderMaterial);
+        scene.add(cube)
+      })
+      scene.add(camera)
+      scene.add(light)
+
+      function create3DLabelFromTestPoints(testPoints){
+        let sprites = []
+        let xSegment = testPoints[0][0].length
+        let ySegment = testPoints[0].length
+        let zSegment = testPoints.length
+        for(let zi = 0; zi < zSegment; zi ++){
+          for(let yi = 0; yi < ySegment; yi ++){
+            for(let xi = 0; xi < xSegment; xi ++){
+              let testPoint = testPoints[zi][yi][xi]
+              sprites.push(create3DLabel(testPoint.label, testPoint.point, 160, 40))
+            }
+          }
+        }
+        return sprites
+      }
+
+      let labels = create3DLabelFromTestPoints(testPoints)
+      labels.forEach(sprite => {
+        scene.add(sprite)
+      })
+
+
+      //string
+      function create3DLabel(text, pos, width, height){
+        let canvas = document.createElement('canvas')
+        canvas.width = width * window.devicePixelRatio
+        canvas.height = height * window.devicePixelRatio
+        canvas.style.width = width * window.devicePixelRatio
+        canvas.style.height = height * window.devicePixelRatio
+
+        var ctx = canvas.getContext('2d')
+        ctx.fillStyle = 'rgb(255, 255, 255)'
+        ctx.font= height*0.8*window.devicePixelRatio + 'px' + " Arial";
+        ctx.fillText(text, 0, height*0.9*window.devicePixelRatio);
+        canvas.style.width = width
+        canvas.style.height = height
+        let texture = new THREE.Texture(canvas)
+        texture.anisotropy = 32
+        texture.needsUpdate = true
+        let mat = new THREE.SpriteMaterial( 
+          { 
+            map: texture, 
+            color: 0xffffff, 
+          } 
+        );
+        let sprite = new THREE.Sprite(mat)
+        sprite.scale.set(2, 1, 1)
+        sprite.position.copy(pos)
+        return sprite
+      }
+
+
+
+
+
+			camera.position.set(20,20,20);
+      camera.up.set(0,0,1)
+      camera.lookAt(new THREE.Vector3(5,5,5))
+			controls = new THREE.TrackballControls( camera, renderer.domElement );
+		  controls.target.set(5,5,5)	
+			var animate = function () {
+				requestAnimationFrame( animate );
+				controls.update();
+				renderer.render(scene, camera);
+			};
+
+			animate();
+		</script>
+	</body>
+</html>

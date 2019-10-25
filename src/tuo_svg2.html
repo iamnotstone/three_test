@@ -1,0 +1,48 @@
+<html>
+  <head>
+    <title>Tuo Annotation</title>
+    <style>
+      body { margin: 0; }
+      canvas { width: 100%; height: 100% }
+
+      #canvas {
+        position: absolute;
+        left: 0px;
+        top: 0px;
+        width: 300px;
+        height: 100px;
+        background-color: white
+      }
+    </style>
+  </head>
+  <body>
+    <!--svg id="mysvg" viewBox="0 0 300 100" xmlns="http://www.w3.org/2000/svg"-->
+    <canvas id='canvas' width=300 height=100></canvas>
+    <script>
+let canvas = document.getElementById('canvas')
+const ctx = canvas.getContext('2d');
+
+function createCircle(cx,cy,r, color){
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.arc(cx, cy, r, 0, Math.PI*2);
+    ctx.stroke();
+  }                                                                   
+  function drawRandomCircle(){
+    let x = 300*Math.random()
+    let y = 100*Math.random()
+    let maxR = Math.min(100-y,y,300-x,x)                                                
+    let r = maxR * Math.random()
+    let color = '#' + Math.floor(0xffffff * Math.random()).toString(16)                 
+    createCircle(x,y,r, color)                   
+  }
+
+  let count = 0
+
+  while(count++ < 100000){
+    drawRandomCircle()
+  }
+    </script>
+  </body>
+</html>
+

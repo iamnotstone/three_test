@@ -1,0 +1,172 @@
+<html>
+	<head>
+		<title>Custom Annotation</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+
+      #root {
+        position: absolute;
+        left: 0px;
+        top: 0px;
+        width: 256px;
+        height: 256px;
+        background-color: white
+      }
+		</style>
+	</head>
+	<body>
+		<script src="./three.js"></script>
+		<script src="./TrackballControls.js"></script>
+		<script type="x-shader/x-vertex" id="vertexshader">
+
+
+      attribute vec3 color;
+      varying vec3 vColor; 
+      void main() {
+        vColor = color;
+				gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+      }
+
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragmentshader">
+
+
+      varying vec3 vColor;
+			void main() {
+
+        gl_FragColor = vec4(vColor, 0.6);
+
+			}
+
+		</script>
+      <div id="root"> </div>
+		<script>
+
+			var renderer = new THREE.WebGLRenderer({antialias: true});
+      renderer.setPixelRatio(window.devicePixelRatio)
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );
+			var scene = new THREE.Scene();
+			var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+
+
+      var light = new THREE.PointLight(0xffffff, 1)
+      light.position.set(0,10,20)
+      light.lookAt(new THREE.Vector3(0,0,0))
+
+      scene.add(light)
+
+      let canvas = document.createElement('canvas')
+      canvas.style.width = 512
+      canvas.style.height = 256
+      /*
+      canvas.width = width * window.devicePixelRatio
+      canvas.height = height * window.devicePixelRatio
+      canvas.style.width = width * window.devicePixelRatio
+      canvas.style.height = height * window.devicePixelRatio
+      */
+      var ctx = canvas.getContext('2d')
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, 512, 256);
+
+      ctx.fillStyle = 'rgb(255, 0,0)'
+      ctx.font= 60 + 'px' + " Arial";
+      ctx.fillText('测试测试', 0, 100);
+      let texture = new THREE.Texture(canvas)
+
+      let div = document.getElementById('root')
+      div.appendChild(canvas)
+
+      texture.anisotropy = 32
+      texture.needsUpdate = true
+      let mat = new THREE.SpriteMaterial( 
+        { 
+          map: texture, 
+          color: 0xffffff, 
+        } 
+      );
+      let sprite = new THREE.Sprite(mat)
+      sprite.scale.set(16,8,100)
+      //scene.add(sprite)
+
+
+      let geo1 = new THREE.BoxGeometry(1,1,1)
+      let mat1 = new THREE.MeshPhongMaterial({color: 0x00ff00, specular: 0x202020, emissive: 0x303030})
+      let cube = new THREE.Mesh(geo1, mat1)
+      //cube.position.set(1,0,0)
+      class TuoAnnotation extends THREE.Sprite{
+        //info: {
+        //  text: String,
+        //  lineMax: Number,
+        //  fontSize: Number
+        //}
+        constructor(info){
+          this.canvas = document.createElement('canvas')
+          this.text = info.text || 'TuoAnnotation'
+          this.lineMax = info.lineMax || 10
+          this.lines = this.getLargerInteger(this.text.length / this.lineMax)
+
+
+          this.canvas.style.width = 512
+          this.canvas.style.height = 256
+          /*
+            canvas.width = width * window.devicePixelRatio
+            canvas.height = height * window.devicePixelRatio
+            canvas.style.width = width * window.devicePixelRatio
+            canvas.style.height = height * window.devicePixelRatio
+          */
+          var ctx = canvas.getContext('2d')
+          ctx.fillStyle = 'white';
+          ctx.fillRect(0, 0, 512, 256);
+
+          ctx.fillStyle = 'rgb(255, 0,0)'
+          ctx.font= 60 + 'px' + " Arial";
+          ctx.fillText('测试测试', 0, 100);
+          this.texture = new THREE.Texture(canvas)
+
+          this.texture.anisotropy = 16
+          this.texture.needsUpdate = true
+          let material = new THREE.SpriteMaterial( 
+            { 
+              map: this.texture, 
+              color: 0xffffff, 
+            } 
+          );
+
+          super(material)
+        }
+
+        getStandardNumber(value){
+          return Math.pow(2, Math.floor(Math.log2(value)) + 1 )
+        }
+
+        getLargerInteger(value){
+          let i = Math.floor(value) + 1
+          if(i - value > 0.99999)
+            return Math.floor(value)
+          else
+            return i
+        }
+      }
+
+
+      scene.add(cube)
+
+
+			camera.position.set(20,20,20);
+      camera.up.set(0,0,1)
+      camera.lookAt(new THREE.Vector3(5,5,5))
+			controls = new THREE.TrackballControls( camera, renderer.domElement );
+		  controls.target.set(5,5,5)	
+			var animate = function () {
+				requestAnimationFrame( animate );
+				controls.update();
+				renderer.render(scene, camera);
+			};
+
+			animate();
+		</script>
+	</body>
+</html>

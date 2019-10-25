@@ -1,0 +1,398 @@
+<html>
+	<head>
+		<title>Custom Shader 3</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+      .magic { 
+          position: absolute;
+          left: 0px;
+          top: 0px
+      }
+		</style>
+	</head>
+	<body>
+		<script src="./three.js"></script>
+		<script src="./TrackballControls.js"></script>
+		<script type="x-shader/x-vertex" id="vertexshader">
+
+			//uniform float amplitude;
+
+			//attribute float displacement;
+
+			//varying vec3 vNormal;
+			//varying vec2 vUv;
+      #define PHONG
+      uniform float centerMid;
+      uniform float centerRadius;
+      uniform float centerHeight;
+      uniform float objectHeight;
+      uniform float objectRadius;
+      uniform float objectMid;
+      uniform float percent;
+      uniform float phase;
+      attribute float displacement;
+      attribute vec3 trigCenter;
+      attribute float trigIndex;
+      uniform float amplitude;
+
+      varying vec3 vViewPosition;
+
+      #ifndef FLAT_SHADED
+
+	      varying vec3 vNormal;
+
+      #endif
+
+      #include <common>
+      #include <uv_pars_vertex>
+      #include <uv2_pars_vertex>
+      #include <displacementmap_pars_vertex>
+      #include <envmap_pars_vertex>
+      #include <color_pars_vertex>
+      #include <fog_pars_vertex>
+      #include <morphtarget_pars_vertex>
+      #include <skinning_pars_vertex>
+      #include <shadowmap_pars_vertex>
+      #include <logdepthbuf_pars_vertex>
+      #include <clipping_planes_pars_vertex>
+
+
+      mat4 rotationMatrix(vec3 axis, float angle) {
+        axis = normalize(axis);
+        float s = sin(angle);
+        float c = cos(angle);
+        float oc = 1.0 - c;
+    
+        return mat4(oc * axis.x * axis.x + c, oc * axis.x * axis.y - axis.z * s, oc * axis.z * axis.x + axis.y * s,  0.0,
+          oc * axis.x * axis.y + axis.z * s, oc * axis.y * axis.y + c, oc * axis.y * axis.z - axis.x * s,  0.0,
+          oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c, 0.0,
+          0.0, 0.0, 0.0, 1.0);
+      }
+
+      
+      mat4 rotationMatrixAxisAndPoint(vec3 axis, vec3 center, float angle){
+        mat4 rM= rotationMatrix(axis, angle);
+        vec3 p0 = -1.0 * center;
+        vec3 p2 = (rM * vec4(p0, 1.0)).xyz - p0;
+        mat4 tM = mat4(
+          1.0,0.0,0.0, 0.0,
+          0.0,1.0,0.0, 0.0,
+          0.0,0.0,1.0, 0.0,
+          p2.x,p2.y,p2.z, 1.0
+        );
+        return tM * rM;
+      }
+
+      vec3 rotate(vec3 v, vec3 axis, float angle) {
+	      mat4 m = rotationMatrix(axis, angle);
+	      return (m * vec4(v, 1.0)).xyz;
+      }
+
+      
+      vec3 rotateAxisAndPoint(vec3 v, vec3 axis, vec3 center, float angle){
+        //mat4 m = rotationMatrix(axis, angle);
+        mat4 m = rotationMatrixAxisAndPoint(axis, center, angle);
+        return (m * vec4(v, 1.0)).xyz;
+      }
+  
+      void main() {
+
+	      #include <uv_vertex>
+	      #include <uv2_vertex>
+	      #include <color_vertex>
+
+	      #include <beginnormal_vertex>
+	      #include <morphnormal_vertex>
+	      #include <skinbase_vertex>
+	      #include <skinnormal_vertex>
+	      #include <defaultnormal_vertex>
+
+        #ifndef FLAT_SHADED // Normal computed with derivatives when FLAT_SHADED
+
+	        vNormal = normalize( transformedNormal );
+
+        #endif
+
+        #include <begin_vertex>
+        #include <morphtarget_vertex>
+	      #include <skinning_vertex>
+	      #include <displacementmap_vertex>
+        //transformed : vec3
+        transformed = (modelMatrix * vec4(transformed, 1.0)).xyz;
+				//transformed = transformed + displacement * amplitude * normal;
+        vec3 trigCenter1 = trigCenter;
+        if(trigCenter1.x < 0.0001 && trigCenter1.y < 0.0001)
+          trigCenter1 = vec3(0.0001, trigCenter1.yz);
+        //trigCenter1 = (modelMatrix * vec4(trigCenter, 1.0)).xyz;
+
+        float cz = clamp(centerMid + centerHeight * (trigCenter1.z - objectMid) / objectHeight, centerMid - centerHeight / 2.0, centerMid + centerHeight / 2.0);
+        float disToZ = sqrt(trigCenter1.x * trigCenter1.x + trigCenter1.y * trigCenter1.y);
+        float cr = clamp(0.9 * centerRadius + disToZ / objectRadius * 0.2 * centerRadius, 0.9 * centerRadius, 1.1 * centerRadius );
+        float cx = trigCenter1.x * cr / disToZ; 
+        float cy = trigCenter1.y * cr / disToZ;
+        vec3 v0 = vec3(cx, cy, cz) - trigCenter1;
+        vec3 vn = normalize(v0);
+        float d = distance(trigCenter1, vec3(cx, cy, cz));
+        vec3 cc = trigCenter1 + vn * percent * d ;
+
+        //float percent2 = clamp(2.0 * percent, 0.0, 1.0);
+        float percent2 = percent;
+        float alpha = trigIndex * 2.0943951023931953;   // PI * 2 / 3
+        vec3 finalPosition;
+        vec3 axis;
+        vec3 start;
+        if(trigIndex == 0.0 || trigIndex == 3.0){
+          finalPosition = cc;
+        }
+        else if(trigIndex == 1.0 || trigIndex == 4.0){
+          axis = normalize(cross(cc, vec3(0.0, 0.0, 1.0)));
+          finalPosition = cc + 0.3 * centerHeight * axis;
+        }
+        else if(trigIndex == 2.0){
+          axis = normalize(cross(cc, vec3(0.0, 0.0, 1.0)));
+          start = cc + 0.35 * centerHeight * axis + 0.2 * centerHeight * normalize(cc);
+          finalPosition = rotateAxisAndPoint(start, axis, cc, phase);
+        }
+        else{
+          //trigIndex == 5.0
+          axis = normalize(cross(cc, vec3(0.0, 0.0, 1.0)));
+          start = cc + 0.35 * centerHeight * axis - 0.2 * centerHeight * normalize(cc);
+          finalPosition = rotateAxisAndPoint(start, axis, cc, -phase);
+        }
+
+        finalPosition = (modelMatrix * vec4(finalPosition, 1.0)).xyz;
+
+        //vec3 start = cc + normalize(vec3(cc.x, cc.y, 0.0)) * 0.1 * centerRadius;
+        //vec3 axis = cross(cc, vec3(0.0, 0.0, 1.0));
+        //vec3 finalPosition = rotateAxisAndPoint(start, axis, cc, alpha + phase);
+        
+        vec3 v1 = finalPosition - transformed;
+        vec3 v1n = normalize(v1);
+        float d1 = distance(transformed, finalPosition);
+        transformed = transformed + v1n * percent2 * d1 ;
+
+
+        vec4 mvPosition = viewMatrix * vec4( transformed, 1.0 );
+
+        gl_Position = projectionMatrix * mvPosition;
+	      //#include <project_vertex>
+	      #include <logdepthbuf_vertex>
+	      #include <clipping_planes_vertex>
+
+	      vViewPosition = - mvPosition.xyz;
+
+	      #include <worldpos_vertex>
+	      #include <envmap_vertex>
+	      #include <shadowmap_vertex>
+	      #include <fog_vertex>
+
+      }
+
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragmentshader">
+
+			varying vec3 vNormal;
+			varying vec2 vUv;
+
+			uniform vec3 color;
+			uniform sampler2D texture;
+
+			void main() {
+
+				//vec3 light = vec3( 0.5, 0.2, 1.0 );
+				//light = normalize( light );
+
+				//float dProd = dot( vNormal, light ) * 0.5 + 0.5;
+
+				//vec4 tcolor = texture2D( texture, vUv );
+				//vec4 gray = vec4( vec3( tcolor.r * 0.3 + tcolor.g * 0.59 + tcolor.b * 0.11 ), 1.0 );
+
+				//gl_FragColor = gray * vec4( vec3( dProd ) * vec3( color ), 1.0 );
+        gl_FragColor = vec4(color, 1.0);
+
+			}
+
+		</script>
+
+    <button class = "magic" onclick = "magic()"> magic </button>
+
+		<script>
+
+
+      var magicTrig = false
+
+      function magic(){
+        console.log('magic')
+        magicTrig = !magicTrig
+      }
+
+
+
+			var renderer = new THREE.WebGLRenderer({antialias: true});
+      renderer.setPixelRatio(window.devicePixelRatio)
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );
+			var scene = new THREE.Scene();
+			var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+			controls = new THREE.TrackballControls( camera, renderer.domElement );
+
+
+      var light = new THREE.PointLight(0xffffff, 1)
+      light.position.set(0,10,20)
+      light.lookAt(new THREE.Vector3(0,0,0))
+      //scene.add(new THREE.AmbientLight(0x333333))
+
+			camera.position.set(10,10,10);
+      camera.up.set(0,0,1)
+      camera.lookAt(new THREE.Vector3(0,0,0))
+
+
+
+			var geometry = new THREE.BoxBufferGeometry( 5, 5, 5, 2, 2, 2);
+			//var geometry = new THREE.SphereBufferGeometry( 5, 50, 50);
+      geometry = geometry.toNonIndexed();
+			var material = new THREE.MeshPhongMaterial( { color: 0x00ff00, specular: 0x303030, emissive: 0x202020 } );
+      var trigCenter = new Float32Array(geometry.attributes.position.count * 3);
+      var trigIndex = new Float32Array(geometry.attributes.position.count)
+      var position = geometry.attributes.position.array
+      var displacement = new Float32Array(geometry.attributes.position.count)
+			noise = new Float32Array( geometry.attributes.position.count );
+
+
+			for ( var i = 0; i < displacement.length; i ++ ) {
+
+				noise[ i ] = Math.random() * 5;
+        var trig = ~~(i / 6);
+        var begin = 18*trig
+        trigCenter[3 * i] = (position[ begin] 
+          + position[begin + 3] + position[ begin + 6]) / 3;
+        trigCenter[3 * i + 1] = (position[ begin + 1] 
+          + position[ begin + 4] + position[ begin + 7]) / 3;
+        trigCenter[3 * i + 2] = (position[ begin + 2] 
+          + position[ begin + 5] + position[ begin + 8]) / 3;
+        trigIndex[i] = i % 6;
+			}
+			geometry.addAttribute( 'displacement', new THREE.BufferAttribute( displacement, 1 ) );
+      geometry.addAttribute( 'trigCenter', new THREE.BufferAttribute( trigCenter, 3));
+      geometry.addAttribute( 'trigIndex', new THREE.BufferAttribute( trigIndex, 1));
+
+
+			uniforms = {
+
+				amplitude: { value: 1.0 },
+				diffuse:     { value: material.color.clone() },
+				specular:     { value: material.specular.clone() },
+				emissive:     { value: material.emissive.clone() },
+				//texture:   { value: new THREE.TextureLoader().load( "textures/water.jpg" ) }
+        percent: {value: 0.0},
+        centerMid: {value: 2.5},
+        centerRadius: {value: 5},
+        centerHeight: {value: 1},
+        objectHeight: {value: 5},
+        objectRadius: {value: 3.6},
+        objectMid: {value: 2.5},
+        phase: {value: -Math.PI/3}
+			};
+
+      uniforms = Object.assign({}, THREE.UniformsUtils
+        .clone(THREE.ShaderLib.phong.uniforms), uniforms)
+
+			//uniforms.texture.value.wrapS = uniforms.texture.value.wrapT = THREE.RepeatWrapping;
+
+			var shaderMaterial = new THREE.ShaderMaterial( {
+
+				uniforms: uniforms,
+				vertexShader:document.getElementById( 'vertexshader' ).textContent,
+				//vertexShader: THREE.ShaderLib.phong.vertexShader,
+				//fragmentShader: document.getElementById( 'fragmentshader' ).textContent
+				fragmentShader: THREE.ShaderLib.phong.fragmentShader,
+        lights: true,
+        side: THREE.DoubleSide
+
+			});
+			var cube = new THREE.Mesh( geometry, shaderMaterial );
+      cube.translateZ(2.5)
+      cube.translateX(20)
+
+      
+
+
+
+
+      var planeGeo = new THREE.PlaneGeometry(50,50)
+			var material1 = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x303030, emissive: 0x202020} );
+      var plane = new THREE.Mesh(planeGeo, material1)
+
+      scene.add(plane)
+
+      scene.add(cube)
+      scene.add(camera)
+      scene.add(light)
+
+      function matrixOfRotateAxisAndPoint (axis, point, angle){
+	      let x01 = - point.x, y01 = -point.y, z01 = -point.z
+	      let vec01 = new THREE.Vector3(x01, y01, z01)
+	      let rotateM = new THREE.Matrix4()
+	      rotateM.makeRotationAxis(axis, angle)
+	      let vec01Next = vec01.clone().applyMatrix4(rotateM)
+	      let objectVec = vec01Next.clone().sub(vec01)
+	      let translateM = new THREE.Matrix4()
+	      translateM.makeTranslation(objectVec.x, objectVec.y, objectVec.z)
+	      return translateM.multiply(rotateM)
+      }
+
+      function rotateAxisAndPoint(v, axis, center, angle){
+        let m = matrixOfRotateAxisAndPoint(axis, center, angle)
+        return v.clone().applyMatrix4(m)
+      }
+		
+      var wave = false	
+			var animate = function () {
+				requestAnimationFrame( animate );
+        var time = Date.now() * 0.02;
+        cube.rotation.z = 0.1 * time;
+				controls.update();
+        if(!magicTrig)
+        {
+          if(uniforms.percent.value < 1.0)
+            uniforms.percent.value += 0.01
+        }
+        else{
+          if(uniforms.percent.value > 0.0)
+            uniforms.percent.value -= 0.01
+        }
+        if(!wave){
+          uniforms.phase.value += 0.2
+          if(uniforms.phase.value > Math.PI / 2){
+            wave = true
+          }
+        }else{
+          uniforms.phase.value -= 0.4
+          if(uniforms.phase.value < - Math.PI / 2){
+            wave = false
+          }
+
+        }
+
+
+			  for ( var i = 0; i < displacement.length; i ++ ) {
+
+				  displacement[ i ] = 0.1 * Math.sin( 0.1 * i + 0.01*time );
+
+				  noise[ i ] += 0.5 * ( 0.5 - Math.random() );
+				  noise[ i ] = THREE.Math.clamp( noise[ i ], -2, 2 );
+
+				  displacement[ i ] += noise[ i ];
+
+			  }
+        geometry.attributes.displacement.needsUpdate = true
+
+				renderer.render(scene, camera);
+			};
+
+			animate();
+		</script>
+	</body>
+</html>

@@ -1,0 +1,228 @@
+<html>
+	<head>
+		<title>Custom Shader 1</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+		</style>
+	</head>
+	<body>
+		<script src="./three.js"></script>
+		<script src="./TrackballControls.js"></script>
+		<script type="x-shader/x-vertex" id="vertexshader">
+
+			uniform float percent;
+      uniform float height;
+			attribute float displacement;
+      uniform float size;
+			//varying vec3 vNormal;
+			varying vec2 vUv;
+  
+      void main() {
+        //vUv = uv;
+        //gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+				//vec3 newPosition = position + displacement * amplitude * normal;
+				//gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+
+        vec3 transformed = (modelMatrix * vec4(position, 1.0)).xyz;
+        /*float cz = transformed.z + 10.0;
+        float disToZ = sqrt(transformed.x * transformed.x + transformed.y * transformed.y);
+        float cx = transformed.x * 100.0 / disToZ;
+        float cy = transformed.y * 100.0 / disToZ;
+        vec3 v0 = vec3(cx, cy, cz) - transformed;
+        vec3 vn = normalize(v0);
+        float d = distance(transformed, vec3(cx, cy, cz));
+        transformed = transformed + vn * percent * d ;
+        */
+
+
+
+				vec4 mvPosition = viewMatrix * vec4( transformed, 1.0 );
+
+				gl_PointSize = size * ( 300.0 / -mvPosition.z );
+        float curHeight = percent * height;
+        float scale;
+        if(transformed.z < curHeight)
+          scale = 0.0;
+        else if(transformed.z > curHeight + 0.3 * height)
+          scale = 0.0;
+        else{
+          if(transformed.z < curHeight + 0.15 * height){
+            scale = 1.0 - (curHeight + 0.15 * height - transformed.z) / (0.15 * height);
+          }
+          else{
+            scale = 1.0 - (transformed.z - curHeight - 0.15 * height) / (0.15 * height);
+          }
+      
+        }
+        
+        gl_PointSize = gl_PointSize * scale;
+
+
+				gl_Position = projectionMatrix * mvPosition;
+      }
+
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragmentshader">
+
+			varying vec3 vNormal;
+			varying vec2 vUv;
+
+			uniform vec3 color;
+			uniform sampler2D texture;
+      uniform float phase;
+      uniform float percent;
+
+			void main() {
+
+				//vec3 light = vec3( 0.5, 0.2, 1.0 );
+				//light = normalize( light );
+
+				//float dProd = dot( vNormal, light ) * 0.5 + 0.5;
+
+				vec4 tcolor = texture2D( texture, gl_PointCoord );
+        if(tcolor.z < 0.5)
+          discard;
+				//vec4 gray = vec4( vec3( tcolor.r * 0.3 + tcolor.g * 0.59 + tcolor.b * 0.11 ), 1.0 );
+
+        gl_FragColor = vec4( vec3(color), 1.0);
+
+			}
+
+		</script>
+
+		<script>
+
+			var renderer = new THREE.WebGLRenderer({antialias: true});
+      renderer.setPixelRatio(window.devicePixelRatio)
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );
+			var scene = new THREE.Scene();
+			var camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+			controls = new THREE.TrackballControls( camera, renderer.domElement );
+
+
+      var light = new THREE.PointLight(0xffffff, 1)
+      light.position.set(0,10,20)
+      light.lookAt(new THREE.Vector3(0,0,0))
+      //scene.add(new THREE.AmbientLight(0x333333))
+
+			camera.position.set(15,15,15);
+      camera.up.set(0,0,1)
+      camera.lookAt(new THREE.Vector3(0,0,0))
+
+
+
+			var geometry = new THREE.BoxBufferGeometry( 5, 5, 15 );
+			var material = new THREE.MeshPhongMaterial( { color: 0x00ff00, specular: 0x303030, emissive: 0x202020 } );
+
+      var cylinderH = 15
+      //var cylinderGeo = new THREE.CylinderBufferGeometry(4, 4, cylinderH, 20, 10, true  )
+      
+
+      function getCylinderRandomPoints(r, R, h, count = 200){
+			  var vertices = [];
+      
+			  for ( var i = 0; i < count; i ++ ) {
+
+				  var vertex = new THREE.Vector3();
+          var radius = r + Math.random() * (R - r);
+          var alpha = (Math.random()*2 - 1) * Math.PI
+		      vertex.x = Math.cos(alpha) * radius;
+		      vertex.y = Math.sin(alpha) * radius;
+		      vertex.z = Math.random() * h;
+
+				  vertices.push( vertex );
+			  }
+
+        return vertices
+      }
+
+
+      var cylinderHeight = 15.0
+      var vertices = getCylinderRandomPoints(5, 6, cylinderHeight, 300)
+
+			var positions = new Float32Array( vertices.length * 3 );
+			for ( var i = 0; i < vertices.length; i ++ ) {
+
+				let vertex = vertices[ i ];
+				vertex.toArray( positions, i * 3 );
+
+			}
+
+      var cylinderGeo = new THREE.BufferGeometry();
+      cylinderGeo.addAttribute( 'position', new THREE.BufferAttribute( positions, 3))
+/*
+      var displacement = new Float32Array(cylinderGeo.attributes.position.count)
+			noise = new Float32Array( cylinderGeo.attributes.position.count );
+
+			for ( var i = 0; i < displacement.length; i ++ ) {
+
+				noise[ i ] = Math.random() * 5;
+
+			}
+			cylinderGeo.addAttribute( 'displacement', new THREE.BufferAttribute( displacement, 1 ) );*/
+			uniforms = {
+				//texture:   { value: new THREE.TextureLoader().load( "textures/sprites/snowflake4.png" ) },
+				texture:   { value: new THREE.TextureLoader().load( "https://res.tuocad.com/common/texture/snowflake4.png" ) },
+        color: {value: new THREE.Color(0xffff00 )},
+        percent: {value: 0.0 },
+        height: {value: cylinderHeight},
+        size: {value: 3.0}
+			};
+
+
+			uniforms.texture.value.wrapS = uniforms.texture.value.wrapT = THREE.RepeatWrapping;
+
+			var shaderMaterial = new THREE.ShaderMaterial( {
+
+				uniforms: uniforms,
+				vertexShader:document.getElementById( 'vertexshader' ).textContent,
+				fragmentShader:document.getElementById( 'fragmentshader' ).textContent,
+        transparent: true,
+			});
+			var cube = new THREE.Mesh( geometry, material )
+
+      var cylinder = new THREE.Points(cylinderGeo, shaderMaterial)
+      cube.translateZ(7.5)
+      //cylinder.rotateX(Math.PI/2)
+      //cylinder.translateY(cylinderH / 2)
+      var planeGeo = new THREE.PlaneGeometry(50,50)
+			var material1 = new THREE.MeshPhongMaterial( { color: 0xffffff, specular: 0x303030, emissive: 0x202020} );
+      var plane = new THREE.Mesh(planeGeo, material1)
+
+      //scene.add(plane)
+      scene.add(cylinder)
+      scene.add(cube)
+      scene.add(camera)
+      scene.add(light)
+			
+			var animate = function () {
+        var time = Date.now() * 0.01
+        cylinder.rotation.z = 1.0 * time 
+				requestAnimationFrame( animate );
+				controls.update();
+			  if(uniforms.percent.value < 1)
+          uniforms.percent.value += 0.008
+			  //uniforms.color.value.offsetHSL( 0.005, 0, 0 );
+        /*
+			  for ( var i = 0; i < displacement.length; i ++ ) {
+
+				  displacement[ i ] = 5*Math.sin( 0.1 * i + time );
+
+				  noise[ i ] += 4 * ( 0.5 - Math.random() );
+				  noise[ i ] = THREE.Math.clamp( noise[ i ], -2, 2 );
+
+				  displacement[ i ] += noise[ i ];
+
+			  }
+        cylinderGeo.attributes.displacement.needsUpdate = true*/
+				renderer.render(scene, camera);
+			};
+
+			animate();
+		</script>
+	</body>
+</html>

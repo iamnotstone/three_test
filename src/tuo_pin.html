@@ -1,0 +1,164 @@
+<html>
+	<head>
+		<title>Tuo Radiate Line</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+
+      #root {
+        position: absolute;
+        left: 0px;
+        top: 0px;
+        width: 256px;
+        height: 256px;
+        background-color: white
+      }
+		</style>
+	</head>
+	<body>
+		<script src="./three.js"></script>
+		<script src="./TrackballControls.js"></script>
+		<script type="x-shader/x-vertex" id="vertexshader">
+
+      uniform float size;
+      uniform float percent;
+      uniform float maxScale;
+      void main() {
+				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+				gl_PointSize = maxScale *  percent * size * ( 300.0 / -mvPosition.z );
+
+				gl_Position = projectionMatrix * mvPosition;
+        
+      }
+
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragmentshader">
+
+      uniform vec3 color;
+			uniform sampler2D texture;
+      uniform float percent;
+			void main() {
+				gl_FragColor = vec4( color, (1.0 - percent) );
+				gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+			}
+
+		</script>
+		<script>
+
+			var renderer = new THREE.WebGLRenderer({antialias: true});
+      renderer.setPixelRatio(window.devicePixelRatio)
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );
+			var scene = new THREE.Scene();
+			var camera = new THREE.PerspectiveCamera( 75, 
+        window.innerWidth/window.innerHeight, 0.1, 1000 );
+
+
+      var light = new THREE.PointLight(0xffffff, 1)
+      light.position.set(0,10,20)
+      light.lookAt(new THREE.Vector3(0,0,0))
+
+      scene.add(light)
+
+      let canvas = document.createElement('canvas')
+      canvas.style.width = 512
+      canvas.style.height = 256
+      let pointGeo = new THREE.BufferGeometry()
+      let position = new Float32Array(3)
+      position[0] = 0
+      position[1] = 0
+      position[2] = 0
+      pointGeo.addAttribute('position', new THREE.BufferAttribute(position, 3))
+
+//geometry: THREE.Geometry || THREE.BufferGeometry
+//parameters: {
+//  type: 'start' || 'end' || 'mid'
+//}
+
+      let obj = getTuoPin(pointGeo, 
+      {
+        speed: 0.5,
+        size: 2.0,
+        color: 0xffffff,
+        countNum: 5
+      })
+      scene.add(obj)
+function getTuoPin(geometry, parameters = {}){
+  let speed = parameters.speed || speed
+  let size = parameters.size || 1.0
+  let maxScale = parameters.maxScale || 5.0
+  let countNum = parameters.countNum || 5
+  let color = parameters.color ? new THREE.Color(parameters.color) 
+    : new THREE.Color(0xffffff)
+
+  let newGeometry
+  if(/BufferGeometry$/.test(geometry.type)){
+    if(geometry.index)
+      newGeometry = geometry.toNonIndexed()
+    else
+      newGeometry = geometry
+  }
+  else{
+    newGeometry = new BufferGeometry()
+    newGeometry.fromGeometry(geometry)
+  }
+
+
+  let uniforms = {
+		texture:   { value: 
+      new THREE.TextureLoader().load( "pin4.png" ) },
+    size: {value: size},
+    color: {value: color},
+    percent: {value: 0},
+    maxScale: {value: maxScale},
+  }
+
+  let mat = new THREE.ShaderMaterial({
+    uniforms: uniforms,
+		vertexShader:document.getElementById( 'vertexshader' ).textContent,
+		fragmentShader: document.getElementById('fragmentshader').textContent,
+    transparent: true
+  })
+
+  let points = new THREE.Points(newGeometry, mat)
+  let count = 0
+  points.userData.animator = (time, stopFunction = new Function()) => {
+    if(count > -1){
+      if(uniforms.percent.value < 1.0){
+        uniforms.percent.value += 0.04 * speed
+      }
+      else
+      {
+        count ++
+        uniforms.percent.value = 0
+      }
+    }
+    else{
+      stopFunction()
+    }
+  }
+  return points
+}
+
+
+
+
+			camera.position.set(20,20,20);
+      camera.up.set(0,0,1)
+      camera.lookAt(new THREE.Vector3(0,0,0))
+			controls = new THREE.TrackballControls( camera, renderer.domElement );
+		  controls.target.set(5,5,5)	
+			var animate = function () {
+				requestAnimationFrame( animate );
+				controls.update();
+				renderer.render(scene, camera);
+        if(obj.userData.animator)
+          obj.userData.animator()
+			};
+
+			animate();
+		</script>
+	</body>
+</html>

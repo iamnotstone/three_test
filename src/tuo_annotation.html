@@ -1,0 +1,446 @@
+<html>
+	<head>
+		<title>Tuo Annotation</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+
+      #root {
+        position: absolute;
+        left: 0px;
+        top: 0px;
+        width: 256px;
+        height: 256px;
+        background-color: white
+      }
+		</style>
+	</head>
+	<body>
+		<script src="./three.js"></script>
+		<script src="./TrackballControls.js"></script>
+		<script type="x-shader/x-vertex" id="vertexshader">
+
+      uniform vec2 scale;
+      varying vec2 vUv;
+      void main() {
+				//gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+        vUv = uv;
+				vec4 tranformed = modelViewMatrix * vec4( 0.0, 0.0, 0.0, 1.0 );
+        tranformed = tranformed + vec4(position.xy * scale, 0, 0);
+        gl_Position = projectionMatrix * tranformed;
+      }
+
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragmentshader">
+
+      uniform vec3 color;
+      varying vec2 vUv;
+			uniform sampler2D map;
+      uniform float umax;
+      uniform float umin;
+      uniform float vmax;
+      uniform float vmin;
+      uniform float during;
+      uniform float percent;
+      uniform float isAnimate;
+      uniform float lineHeight;
+
+      float getVirtualPercent(float x, float y){
+        float detaY = vmax - y;
+        float detaX = x - umin;
+        float total = (umax - umin) * floor( (vmax - vmin) / lineHeight );
+        float cur = detaX + floor((detaY - vmin) / lineHeight) * (umax - umin);
+        return cur / total;
+      }
+
+
+      float getOpacityRatio(float x, float y){
+        float virtualPercent = getVirtualPercent(x, y);
+        if(virtualPercent <= percent - during)
+          return 1.0;
+        else if(virtualPercent >=  percent + during)
+          return 0.0;
+        else
+          return (percent - virtualPercent)/(2.0 * during) + 0.5;
+      }
+
+			void main() {
+        vec4 tcolor;
+				tcolor = texture2D( map, vUv );
+        if(isAnimate == 1.0){
+          if(percent < 1.0){
+            if(vUv.x < umax && vUv.x >= umin && vUv.y < vmax && vUv.y >= vmin){
+              tcolor.a = tcolor.a * getOpacityRatio(vUv.x, vUv.y);
+            }
+          }
+        }
+        gl_FragColor = vec4(color * tcolor.rgb, tcolor.a);
+
+			}
+
+		</script>
+      <div id="root"> </div>
+		<script>
+
+			var renderer = new THREE.WebGLRenderer({antialias: true});
+      renderer.setPixelRatio(window.devicePixelRatio)
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );
+			var scene = new THREE.Scene();
+			var camera = new THREE.PerspectiveCamera( 75, 
+        window.innerWidth/window.innerHeight, 0.1, 1000 );
+
+
+      var light = new THREE.PointLight(0xffffff, 1)
+      light.position.set(0,10,20)
+      light.lookAt(new THREE.Vector3(0,0,0))
+
+      scene.add(light)
+
+      let canvas = document.createElement('canvas')
+      canvas.style.width = 512
+      canvas.style.height = 256
+      /*
+      canvas.width = width * window.devicePixelRatio
+      canvas.height = height * window.devicePixelRatio
+      canvas.style.width = width * window.devicePixelRatio
+      canvas.style.height = height * window.devicePixelRatio
+      */
+      var ctx = canvas.getContext('2d')
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, 512, 256);
+
+      ctx.fillStyle = 'rgb(255, 0,0)'
+      ctx.font= 60 + 'px' + " Arial";
+      ctx.fillText('测试测试', 0, 100);
+      let texture = new THREE.Texture(canvas)
+
+      let div = document.getElementById('root')
+      //div.appendChild(canvas)
+
+      texture.anisotropy = 32
+      texture.needsUpdate = true
+
+
+      let mat = new THREE.SpriteMaterial( 
+        { 
+          map: texture, 
+          color: 0xffffff, 
+        } 
+      );
+      let sprite = new THREE.Sprite(mat)
+      sprite.scale.set(16,8,100)
+      //scene.add(sprite)
+
+
+      let geo1 = new THREE.BoxGeometry(1,1,1)
+      let mat1 = new THREE.MeshPhongMaterial({color: 0x00ff00, 
+        specular: 0x202020, emissive: 0x303030})
+      let cube = new THREE.Mesh(geo1, mat1)
+      cube.position.set(1,0,0)
+      //scene.add(cube)
+
+
+const geoAnno = new THREE.BufferGeometry()
+let position = new Float32Array( 3 * 3 * 2)
+let uv = new Float32Array(2 * 3 * 2)
+
+position[0] = -0.5
+position[1] = 0.5
+position[2] = 0
+position[3] = -0.5
+position[4] = -0.5
+position[5] = 0
+position[6] = 0.5
+position[7] = 0.5
+position[8] = 0
+position[9] = -0.5
+position[10] = -0.5
+position[11] = 0
+position[12] = 0.5
+position[13] = -0.5
+position[14] = 0
+position[15] = 0.5
+position[16] = 0.5
+position[17] = 0
+
+uv[0] = 0
+uv[1] = 1
+uv[2] = 0
+uv[3] = 0
+uv[4] = 1
+uv[5] = 1
+uv[6] = 0
+uv[7] = 0
+uv[8] = 1
+uv[9] = 0
+uv[10] = 1
+uv[11] = 1
+geoAnno.addAttribute('position', new THREE.BufferAttribute(position, 3))
+geoAnno.addAttribute('uv', new THREE.BufferAttribute(uv, 2))
+
+class TuoAnnotation extends THREE.Mesh{
+  constructor(parameters = {}){
+    let color = parameters.color ? new THREE.Color(parameters.color) 
+      : new THREE.Color(0xffffff);
+
+		let uniforms = {
+      color:{value: color},
+      scale: {value: new THREE.Vector2()},
+      isAnimate: {value: 0.0},
+      percent: {value: 0.0},
+      umin: {value: 0.0},
+      vmin: {value: 0.0},
+      umax: {value: 1.0},
+      vmax: {value: 1.0},
+      during: {value: 0.2},
+      lineHeight: {value: 0.0}
+    };
+
+		let mat = new THREE.ShaderMaterial( {
+
+				uniforms: uniforms,
+				vertexShader:document.getElementById( 'vertexshader' ).textContent,
+				fragmentShader: document.getElementById('fragmentshader').textContent,
+        transparent: true 
+			});
+    super(geoAnno, mat)
+    this.borderColor = parameters.borderColor || 0xffffff;
+    this.fontColor = parameters.fontColor || 0xffffff
+    this.width = parameters.width || 10
+    this.fontSize = parameters.fontSize || 15
+    this.lineHeight = parameters.lineHeight || this.fontSize * 1.8
+    this.maxLineWidth = parameters.maxLineWidth || 128
+    if(this.maxLineWidth < 16 + this.fontSize * 4)
+      this.maxLineWidth = 16 + fontSize * 4
+    this.canvas = document.createElement('canvas')
+    this.text = parameters.text || 'TuoAnnotation'
+    this.drawAnnotion()
+    this.height = this.width * this.realCanvasHeight / this.realCanvasWidth
+    uniforms.scale.value.set(this.width, this.height)
+    this.texture = new THREE.Texture(this.canvas)
+    this.texture.needsUpdate = true
+    uniforms.map = {value: this.texture}
+    if(parameters.isAnimate){
+      this.addAnimator()
+    }
+  }
+
+  getStandardNumber(value){
+    return Math.pow(2, this.getLargerInteger(Math.log2(value)))
+  }
+
+  getLargerInteger(value){
+    let i = Math.floor(value) + 1
+    if(i - value > 0.99999)
+      return Math.floor(value)
+    else
+      return i
+  }
+
+  realDraw(){
+    let words = this.getWordsFromString(this.text);
+    let line = '';
+    let indent = 8
+    let maxWidth = this.maxLineWidth - indent*2
+    this.lines = 0
+    let context = this.canvas.getContext('2d')
+    let testWidth
+    let y = this.lineHeight + 6
+    context.fillStyle = '#' + this.fontColor.toString(16)
+    context.font= this.fontSize + 'px' + " Arial";
+    for(var n = 0; n < words.length; n++) {
+      var testLine = line + words[n] + (words[n].charCodeAt() < 128 ? ' ':'');
+      var metrics = context.measureText(testLine);
+      testWidth = metrics.width;
+      if (testWidth > maxWidth && n > 0) {
+        context.fillText(line, indent, y);
+        line = words[n] + (words[n].charCodeAt() < 128 ? ' ':'');
+        y += this.lineHeight;
+        this.lines ++
+      }
+      else {
+        line = testLine;
+      }
+    }
+    this.lines ++
+    context.fillText(line, indent, y);
+    this.roundRect(0,0, this.realCanvasWidth, this.realCanvasHeight, 8) 
+  }
+
+  roundRect(x, y, width, height, radius, fill, stroke) {
+    let ctx = this.canvas.getContext('2d')
+    ctx.lineWidth = 2
+    ctx.strokeStyle = '#' + this.borderColor.toString(16);
+    if (typeof stroke == 'undefined') {
+      stroke = true;
+    }
+    if (typeof radius === 'undefined') {
+      radius = 5;
+    }
+    if (typeof radius === 'number') {
+      radius = {tl: radius, tr: radius, br: radius, bl: radius};
+    } else {
+      var defaultRadius = {tl: 0, tr: 0, br: 0, bl: 0};
+      for (var side in defaultRadius) {
+        radius[side] = radius[side] || defaultRadius[side];
+      }
+    }
+    ctx.beginPath();
+    ctx.moveTo(x + radius.tl, y);
+    ctx.lineTo(x + width - radius.tr, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
+    ctx.lineTo(x + width, y + height - radius.br);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
+    ctx.lineTo(x + radius.bl, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
+    ctx.lineTo(x, y + radius.tl);
+    ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+    ctx.closePath();
+    if (fill) {
+      ctx.fill();
+    }
+    if (stroke) {
+      ctx.stroke();
+    }
+
+  }
+
+
+  drawAnnotion(){
+    let words = this.getWordsFromString(this.text);
+    let line = '';
+    let indent = 8
+    let maxWidth = this.maxLineWidth - indent*2
+    this.lines = 0
+    let context = this.canvas.getContext('2d')
+    let testWidth
+    let y = this.lineHeight + 6
+    context.fillStyle = 'rgb(255, 0,0)'
+    context.font= this.fontSize + 'px' + " Arial";
+    for(var n = 0; n < words.length; n++) {
+      var testLine = line + words[n] + (words[n].charCodeAt() < 128 ? ' ':'');
+      var metrics = context.measureText(testLine);
+      testWidth = metrics.width;
+      if (testWidth > maxWidth && n > 0) {
+        line = words[n] + (words[n].charCodeAt() < 128 ? ' ':'');
+        y += this.lineHeight;
+        this.lines ++
+      }
+      else {
+        line = testLine;
+      }
+    }
+    this.lines ++
+
+    let contextWidth
+    let contextHeight
+    if(this.lines <= 1){
+      contextWidth = testWidth
+      contextHeight = this.lineHeight
+    }
+    else{
+      contextWidth = maxWidth
+      contextHeight = this.lineHeight * this.lines
+    }
+
+    this.realCanvasWidth = this.getStandardNumber(contextWidth + 16)
+    this.realCanvasHeight = this.getStandardNumber(contextHeight + 16)
+    this.canvas.width = this.realCanvasWidth
+    this.canvas.height = this.realCanvasHeight
+    this.canvas.style.width = this.canvas.width
+    this.canvas.style.height = this.canvas.height
+    this.realDraw()
+  }
+
+  getWordsFromString(text){
+    let words = []
+    let word = ''
+    let isAcsii = false
+    for(let t of text){
+      if(t === ' '){
+        if(isAcsii){
+          words.push(word)
+          isAcsii = false
+          word = ''
+        }
+        else
+          words.push(t)
+        continue
+      }
+
+      
+
+      if(t.charCodeAt() < 128){
+        word += t
+        isAcsii = true 
+      }else{
+        if(isAcsii)
+        {
+          words.push(word)
+          isAcsii = false
+          word = ''
+        }
+        words.push(t)
+      }
+    }
+    if(word.length > 0)
+      words.push(word)
+
+    return words
+  }
+
+  addAnimator(){
+    let uniforms = this.material.uniforms
+    uniforms.umax.value = (this.realCanvasWidth - 8) / this.realCanvasWidth
+    uniforms.vmax.value = (this.realCanvasHeight - 6) / this.realCanvasHeight
+    uniforms.umin.value = 8 / this.realCanvasWidth
+    uniforms.vmin.value = 6 / this.realCanvasHeight
+    uniforms.during.value = this.fontSize * 2 / (this.realCanvasWidth * this.lines)
+    uniforms.isAnimate.value = 1.0
+    uniforms.lineHeight.value = this.lineHeight / this.realCanvasHeight
+
+    this.userData.animator = (time, stopFunction = new Function()) => {
+      if(uniforms.percent.value < 1.0)
+        uniforms.percent.value += 0.007
+      else{
+        stopFunction()
+      }
+    }
+  }
+}
+
+
+let obj = new TuoAnnotation(
+  {
+    text: 'i am not stone and you are not',//'我是欧阳维杰，我是胡爽的老公，我是欧阳新月的爸爸',
+    fontSize: 20,
+    width: 30,
+    maxLineWidth: 512,
+    fontColor: 0xffffff,
+    borderColor: 0xa0a0a0,
+    isAnimate: true
+  })
+
+div.appendChild(obj.canvas)
+obj.position.set(0, 0, 0)
+scene.add(obj)
+
+			camera.position.set(20,20,20);
+      camera.up.set(0,0,1)
+      camera.lookAt(new THREE.Vector3(5,5,5))
+			controls = new THREE.TrackballControls( camera, renderer.domElement );
+		  controls.target.set(5,5,5)	
+			var animate = function () {
+				requestAnimationFrame( animate );
+				controls.update();
+				renderer.render(scene, camera);
+        if(obj.userData.animator)
+          obj.userData.animator()
+			};
+
+			animate();
+		</script>
+	</body>
+</html>

@@ -1,0 +1,121 @@
+<html>
+	<head>
+		<title>Tuo Annotation</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+
+      #root {
+        position: absolute;
+        left: 0px;
+        top: 0px;
+        width: 256px;
+        height: 256px;
+        background-color: white
+      }
+		</style>
+	</head>
+	<body>
+    <!--svg id="mysvg" viewBox="0 0 300 100" xmlns="http://www.w3.org/2000/svg"-->
+    <script>
+      let svgns = "http://www.w3.org/2000/svg";
+      //let mysvg = document.getElementById('mysvg')
+
+      function createSvg(){
+        var svg = document.createElementNS(svgns, "svg");
+        svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        svg.setAttribute('viewBox', '0 0 300 100');
+        svg.setAttribute('style', 'position: absolute; left: 0px; top: 0px')
+        return svg
+      }
+
+
+      function createCircle(cx,cy,r, color){
+        let circle = document.createElementNS(svgns, 'circle')
+        circle.setAttributeNS(null, 'cx', cx);
+        circle.setAttributeNS(null, 'cy', cy);
+        circle.setAttributeNS(null, 'r', r);
+        circle.setAttributeNS(null, 'style', `fill: none; stroke: ${color}; stroke-width: 1px;`);
+        return circle
+      }
+
+
+
+      //let list = []
+
+      function drawRandomCircle(svg){
+        let x = 300*Math.random()
+        let y = 100*Math.random()
+        let maxR = Math.min(100-y,y,300-x,x)
+        let r = maxR * Math.random()
+        let color = '#' + Math.floor(0xffffff * Math.random()).toString(16)
+
+        let c = createCircle(x,y,r, color)
+        svg.appendChild(c)
+
+        //list.push(c)
+
+      }
+
+      let svgs = []
+
+      function drawCircleAndSvg(){
+        let svg = createSvg()
+        for(let i = 0 ; i < 100 ; i ++)
+          drawRandomCircle(svg)
+        //document.body.appendChild(svg)
+        svgs.push(svg)
+      }
+
+      //drawRandomCircle()
+
+      let startT = performance.now()
+      console.log('start:', startT)
+      /*
+      for(let i = 0; i < 100; i ++){
+        drawRandomCircle()
+      }*/
+
+      let cout = 0
+      function drawCircles(){
+        if(cout < 100000)
+        {
+          drawCircleAndSvg()
+          requestAnimationFrame(drawCircles)
+          cout +=100
+        }else{
+          svgs.forEach(svg => {
+            document.body.appendChild(svg)
+          })
+        }
+      }
+
+      drawCircles()
+      /*
+      list.forEach(c => {
+        mysvg.appendChild(c)
+      })*/
+
+      /*
+      mysvg.style.display = 'none'
+      let cout = 0
+      function drawCircle(){
+        if(cout < 100000)
+        {
+          drawRandomCircle()
+          for(let i = 0; i < 10; i ++){
+            drawRandomCircle()
+          }
+          requestAnimationFrame(drawCircle)
+          cout +=10
+        }
+        else
+          mysvg.style.display = 'block'
+      }
+ 
+      drawCircle() */
+      let endT = performance.now()
+      console.log('end:', endT, ' deta:', endT - startT)
+    </script>
+	</body>
+</html>

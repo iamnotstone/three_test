@@ -35,7 +35,7 @@
 			function init() {
 
 
-				renderer = new THREE.WebGLRenderer();
+				renderer = new THREE.WebGLRenderer({antialias: true});
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
 				document.body.appendChild( renderer.domElement );
@@ -47,8 +47,8 @@
 				camera.position.set( 0, 0, 500 );
 
 				controls = new THREE.TrackballControls( camera, renderer.domElement );
-				controls.minDistance = 200;
-				controls.maxDistance = 500;
+				//controls.minDistance = 200;
+				//controls.maxDistance = 500;
 
 				//scene.add( new THREE.AmbientLight( 0x222222 ) );
 
@@ -59,14 +59,15 @@
         camera.add(light)
         scene.add(camera)
 			  var geometry = new THREE.BoxBufferGeometry( 100, 100, 100 );
-			  var material = new THREE.MeshPhongMaterial( { color: 0x00ff00, specular: 0x303030, emissive: 0x202020 } );
+			  var material = new THREE.MeshPhongMaterial( { color: 0x00ff00, specular: 0x303030, emissive: 0x202020 , side: THREE.DoubleSide} );
+        material.depthTest = false
 			  var cube = new THREE.Mesh( geometry, material );
 
-        var cube1 = new THREE.Mesh( geometry, material);
-        cube1.position.set(110, 0, 0)
+        //var cube1 = new THREE.Mesh( geometry, material);
+        //cube1.position.set(110, 0, 0)
         
         scene.add(cube)
-        scene.add(cube1)
+        //scene.add(cube1)
 
 			}
 
