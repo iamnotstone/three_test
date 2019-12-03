@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - glTF loader test</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<link type="text/css" rel="stylesheet" href="main.css">
+
+	</head>
+
+	<body>
+
+		<script src="./three.js"></script>
+		<script src="./jsm/loaders/GLTFLoader.js"></script>
+		<script type="module">
+
+			//import * as THREE from '../build/three.module.js';
+      window.THREE = THREE
+
+			import Stats from './jsm/libs/stats.module.js';
+
+			import { OrbitControls } from './jsm/controls/OrbitControls.js';
+			//import { GLTFLoader } from './jsm/loaders/GLTFLoader.js';
+      var GLTFLoader = THREE.GLTFLoader
+			var container, stats, controls;
+			var camera, scene, renderer;
+
+			init();
+			animate();
+
+			function init() {
+
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.001, 10 );
+        let light = new THREE.PointLight(0xffffff, 1)
+        //let ambient = new THREE.AmbientLight(0xffffff)
+        camera.add(light)
+				camera.position.set( 0.08, 0,0);
+				scene = new THREE.Scene();
+        //scene.background = new THREE.Color(0x808080)
+        scene.add(camera)
+        //scene.add(ambient)
+
+        camera.lookAt(0,0,0)
+        var vBox = new THREE.Box3()
+				var loader = new GLTFLoader().setPath( '/gltf/' );
+				loader.load( 'test.gltf', function ( gltf ) {
+
+				  gltf.scene.traverse( function ( child ) {
+            if(child.material && child.isMesh){
+              //child.
+              child.geometry.computeVertexNormals()
+              child.material.flatShading = false
+              /*
+              let edges = new THREE.EdgesGeometry(child.geometry)
+              let newLine = new THREE.LineSegments(edges)
+              newLine.material.linewidth = 1
+              newLine.visible = true
+              newLine.material.color.set(0x000000)
+              child.visible = true
+              newLine.isCreated = true
+              child.parent.add(newLine)*/
+              //mat.flatShading = false
+            }
+
+            if(child.material && child.isLine && !child.isCreated){
+              child.material.depthWrite = false
+              child.material.color.set(0x101010)
+              child.visible = true
+              //child.translateY(800)
+              //console.log('child:', child.position)
+            }
+
+				  } );
+
+				  scene.add( gltf.scene );
+          vBox.setFromObject(gltf.scene)
+
+          console.log('box:', vBox)
+          let vSphere = new THREE.Sphere()
+          vBox.getBoundingSphere(vSphere)
+          camera.position.copy(vSphere.center)
+          let xDir = new THREE.Vector3(1,0,0)
+          camera.position.add(xDir.multiplyScalar(vSphere.radius * 2.5))
+          camera.lookAt(vSphere.center)
+          controls.target.copy(vSphere.center)
+			  } );
+
+
+			  renderer = new THREE.WebGLRenderer( { antialias: true } );
+			  renderer.setPixelRatio( window.devicePixelRatio );
+			  renderer.setSize( window.innerWidth, window.innerHeight );
+			  renderer.gammaOutput = true;
+			  container.appendChild( renderer.domElement );
+
+			  controls = new OrbitControls( camera, renderer.domElement );
+			  controls.target.set( 0.005, 0.005, -0.005 );
+			  controls.update();
+			  window.addEventListener( 'resize', onWindowResize, false );
+
+				// stats
+			  stats = new Stats();
+			  container.appendChild( stats.dom );
+      }
+
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+			//
+
+			function animate() {
+
+				requestAnimationFrame( animate );
+
+				renderer.render( scene, camera );
+
+				stats.update();
+
+			}
+
+		</script>
+
+	</body>
+</html>
